@@ -1,78 +1,64 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>LearnLens Advanced</title>
+    <title>LearnLens</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root { --primary: #6a5acd; --bg: #f4f4f9; }
-        body { font-family: sans-serif; background: var(--bg); padding: 20px; }
-        .card { background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .hidden { display: none; }
-        canvas { max-height: 300px; }
+        body { font-family: sans-serif; background: #f4f4f9; padding: 20px; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
     </style>
 </head>
 <body>
-    <div id="app" style="max-width: 600px; margin: auto;">
-        <div id="login" class="card">
-            <h1>LearnLens</h1>
-            <input type="text" id="username" placeholder="Name">
-            <select id="role"><option value="student">Student</option><option value="teacher">Teacher</option></select>
-            <button onclick="login()">Enter</button>
-        </div>
+    <div id="login" class="card">
+        <h1>LearnLens</h1>
+        <input type="email" id="userEmail" placeholder="School Gmail ID">
+        <select id="role"><option value="student">Student</option><option value="teacher">Teacher</option></select>
+        <button onclick="login()">Enter</button>
+    </div>
 
-        <div id="dashboard" class="hidden">
-            <h2 id="greet"></h2>
-            <div class="card">
-                <canvas id="myChart"></canvas>
-            </div>
-            <div id="content"></div>
-        </div>
+    <div id="dashboard" class="card" style="display:none;">
+        <canvas id="myChart"></canvas>
+        <div id="content"></div>
     </div>
 
 <script>
     const API_URL = "https://script.google.com/macros/s/AKfycbzuGrWCRZtSkJ7LayV_qTbVRcE29LdKvnV_DZzcxfyyJbvJlEmihrKrqjIGZr65jiiE/exec";
-    let userData = [];
 
-    async function fetchData() {
-        const res = await fetch(API_URL);
-        const rawData = await res.json();
+    async function login() {
+        document.getElementById('login').style.display = 'none';
+        document.getElementById('dashboard').style.display = 'block';
         
-        // Processing: Grouping duplicates, Case Insensitive
-        let counts = {};
-        rawData.forEach(d => {
-            let key = d.topic.toLowerCase().trim();
-            counts[key] = (counts[key] || 0) + 1;
-        });
-
-        renderDashboard(counts, rawData);
-    }
-
-    function renderDashboard(counts, rawData) {
-        // Charting
-        const ctx = document.getElementById('myChart').getContext('2d');
-        new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: Object.keys(counts),
-                datasets: [{ label: 'Students Confused', data: Object.values(counts), backgroundColor: '#6a5acd' }]
-            }
-        });
-
-        // Content
-        const content = document.getElementById('content');
-        if (document.getElementById('role').value === 'student') {
-            content.innerHTML = Object.keys(counts).map(topic => 
-                `<p><b>${topic}</b> — ${counts[topic]} student(s) have this doubt</p>`).join('');
-        } else {
-            content.innerHTML = rawData.map(d => `<p>${d.name} needs help: ${d.topic}</p>`).join('');
+        try {
+            const res = await fetch(API_URL);
+            const data = await res.json();
+            render(data);
+        } catch (err) {
+            console.error("Fetch failed. Open the URL directly to see if it's a Login Page:", API_URL);
+            alert("Error loading data. Check console (F12).");
         }
     }
 
-    function login() {
-        document.getElementById('login').classList.add('hidden');
-        document.getElementById('dashboard').classList.remove('hidden');
-        fetchData();
+    function render(data) {
+        const role = document.getElementById('role').value;
+        const content = document.getElementById('content');
+        
+        if(role === 'student') {
+            content.innerHTML = `<input type="text" id="topic" placeholder="Doubt"><button onclick="submitDoubt()">Submit</button>`;
+        } else {
+            content.innerHTML = data.map(d => `<p>${d.email}: ${d.topic}</p>`).join('');
+        }
+    }
+
+    async function submitDoubt() {
+        await fetch(API_URL, { 
+            method: 'POST', 
+            body: JSON.stringify({
+                email: document.getElementById('userEmail').value,
+                subject: "General",
+                topic: document.getElementById('topic').value
+            })
+        });
+        location.reload();
     }
 </script>
 </body>
